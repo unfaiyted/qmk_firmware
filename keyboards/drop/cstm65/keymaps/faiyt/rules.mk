@@ -5,3 +5,6 @@ SRC += lib/common.c
 TAP_DANCE_ENABLE = yes
 CAPS_WORD_ENABLE = yes
 DEFERRED_EXEC_ENABLE = yes
+OS_DETECTION_ENABLE = yes
+
+
