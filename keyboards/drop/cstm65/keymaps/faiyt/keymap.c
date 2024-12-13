@@ -39,6 +39,7 @@ void tmux_key(uint16_t keycode) {
 enum custom_keycodes {
     CUSTOM_GUI_A = SAFE_RANGE,  // Our custom GUI+A key
     CUSTOM_GUI_SCLN,
+    CUSTOM_GUI,
     FORCE_GUI,
     OS_INFO
     //
@@ -55,7 +56,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT_65_ansi_blocker(
         TD(TD_CAPS_ESC), KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
-        QK_GRAVE_ESCAPE,  CUSTOM_GUI_A,    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_H,    RSFT_T(KC_J),   MT(MOD_LCTL, KC_K),    LALT_T(KC_L),    CUSTOM_GUI_SCLN, KC_QUOT,          KC_ENT,  KC_PGUP,
+        QK_GRAVE_ESCAPE,  LT(0,KC_A),    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_H,    RSFT_T(KC_J),   MT(MOD_LCTL, KC_K),    LALT_T(KC_L),    LT(0,KC_SCLN), KC_QUOT,          KC_ENT,  KC_PGUP,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
         KC_LCTL, LT(_TMUX, KC_LGUI), LT(_RAISE, KC_LALT),                            KC_SPC,                             LT(_TMUX, KC_RALT), MO(_CONFIG),   KC_LEFT, KC_DOWN, KC_RGHT
     ),
@@ -125,28 +126,52 @@ bool process_detected_host_os_kb(os_variant_t detected_os) {
 
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    static uint16_t custom_gui_a_timer = 0;
-    static uint16_t custom_gui_scln_timer = 0;
-    static bool gui_a_held = false;
-    static bool gui_scln_held = false;
+    // static uint16_t custom_gui_a_timer = 0;
+    // static uint16_t custom_gui_scln_timer = 0;
+    // static bool gui_a_held = false;
+    // static bool gui_scln_held = false;
     // static bool win_key_active = false;
     static bool other_key_pressed = false;
 
-
     // Handle other key presses
-    if (keycode != CUSTOM_GUI_A && keycode != CUSTOM_GUI_SCLN) {
         if (record->event.pressed) {
-            if ((gui_a_held && timer_elapsed(custom_gui_a_timer) >= TAPPING_TERM) ||
-                (gui_scln_held && timer_elapsed(custom_gui_scln_timer) >= TAPPING_TERM)) {
+            if (keycode != LT(0, KC_A) || keycode != LT(0, KC_SCLN))
                 other_key_pressed = true;
-                register_code(KC_LGUI);
-            }
         } else {
-            if (other_key_pressed) {
-                unregister_code(KC_LGUI);
-            }
             other_key_pressed = false;
         }
+    //
+
+    //
+    switch (keycode) {
+        case LT(0,KC_A):
+            if (record->tap.count && record->event.pressed) {
+                // tap_code16(C(KC_C)); // Intercept tap function to send Ctrl-C
+                tap_code16(KC_A);
+            } else if (record->event.pressed) {
+                // tap_code16(C(KC_V)); // Intercept hold function to send Ctrl-V
+                if (other_key_pressed) {
+                    // tap_code16(KC_LGUI);
+                    register_code(KC_LGUI);
+                }
+            } else {
+                unregister_code(KC_LGUI);
+            }
+            return false;
+        case LT(0, KC_SCLN):
+            if (record->tap.count && record->event.pressed) {
+                // tap_code16(C(KC_C)); // Intercept tap function to send Ctrl-C
+                tap_code16(KC_SCLN);
+            } else if (record->event.pressed) {
+                // tap_code16(C(KC_V)); // Intercept hold function to send Ctrl-V
+                if (other_key_pressed) {
+                    // tap_code16(KC_LGUI);
+                    register_code(KC_LGUI);
+                }
+            } else {
+                unregister_code(KC_LGUI);
+            }
+            return false;
     }
 
     // TMUX layer handling
@@ -158,21 +183,21 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 
     // Handle standalone Windows key
-    if (keycode == KC_LGUI) {
-        if (record->event.pressed) {
-            // win_key_active = true;
-            other_key_pressed = false;
-            return false;
-        } else {
-            if (!other_key_pressed) {
-                // win_key_active = false;
-                return false;
-            }
-            // win_key_active = false;
-            unregister_code(KC_LGUI);
-            return false;
-        }
-    }
+    // if (keycode == KC_LGUI) {
+    //     if (record->event.pressed) {
+    //         // win_key_active = true;
+    //         other_key_pressed = false;
+    //         return false;
+    //     } else {
+    //         if (!other_key_pressed) {
+    //             // win_key_active = false;
+    //             return false;
+    //         }
+    //         // win_key_active = false;
+    //         unregister_code(KC_LGUI);
+    //         return false;
+    //     }
+    // }
 
     // Force GUI key - bypasses all custom handling
     if (keycode == FORCE_GUI) {
@@ -186,44 +211,44 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
     // Handle custom GUI+A with tap-hold behavior
     // Todo: Make this so the a key takes less time to show up when pressed
-    if (keycode == CUSTOM_GUI_A) {
-        if (record->event.pressed) {
-            custom_gui_a_timer = timer_read();
-            gui_a_held = true;
-        } else {
-            gui_a_held = false;
-            // On release
-            if (timer_elapsed(custom_gui_a_timer) < TAPPING_TERM) {
-                // This was a tap, send 'a'
-                tap_code(KC_A);
-            }
+    // if (keycode == CUSTOM_GUI_A) {
+    //     if (record->event.pressed) {
+    //         custom_gui_a_timer = timer_read();
+    //         gui_a_held = true;
+    //     } else {
+    //         gui_a_held = false;
+    //         // On release
+    //         if (timer_elapsed(custom_gui_a_timer) < TAPPING_TERM) {
+    //             // This was a tap, send 'a'
+    //             tap_code(KC_A);
+    //         }
+    //
+    //         if (!gui_scln_held) {
+    //            unregister_code(KC_LGUI);
+    //         }
+    //     }
+    //     return false;
+    // }
 
-            if (!gui_scln_held) {
-               unregister_code(KC_LGUI);
-            }
-        }
-        return false;
-    }
-
-    if (keycode == CUSTOM_GUI_SCLN) {
-        if (record->event.pressed) {
-            custom_gui_scln_timer = timer_read();
-            gui_scln_held = true;
-        } else {
-            gui_scln_held = false;
-            // On release
-            if (timer_elapsed(custom_gui_scln_timer) < TAPPING_TERM) {
-                // This was a tap, send ';'
-                tap_code(KC_SCLN);
-            }
-
-            if (!gui_a_held) {
-                unregister_code(KC_LGUI);
-            }
-
-        }
-        return false;
-    }
+    // if (keycode == CUSTOM_GUI_SCLN) {
+    //     if (record->event.pressed) {
+    //         custom_gui_scln_timer = timer_read();
+    //         gui_scln_held = true;
+    //     } else {
+    //         gui_scln_held = false;
+    //         // On release
+    //         if (timer_elapsed(custom_gui_scln_timer) < TAPPING_TERM) {
+    //             // This was a tap, send ';'
+    //             tap_code(KC_SCLN);
+    //         }
+    //
+    //         if (!gui_a_held) {
+    //             unregister_code(KC_LGUI);
+    //         }
+    //
+    //     }
+    //     return false;
+    // }
 
     if (keycode == OS_INFO) {
 
@@ -248,6 +273,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         }
     }
+
     return true;
 }
 
