@@ -14,7 +14,8 @@ enum layers {
 
 
 enum tap_dance_actions {
-    TD_TAB_TILDE = 0,
+    TD_TAB_GRV = 0,
+    TD_GRV_TAB,
     TD_CAPS_ESC,
     TD_PER_DOLLAR
 };
@@ -22,17 +23,70 @@ enum tap_dance_actions {
 
 tap_dance_action_t tap_dance_actions[] = {
     // Tap once for Escape, twice for Caps Lock
-    [TD_TAB_TILDE] = ACTION_TAP_DANCE_DOUBLE(KC_TAB, KC_TILDE),
+    [TD_TAB_GRV] = ACTION_TAP_DANCE_DOUBLE(KC_TAB, KC_GRV),
+    [TD_GRV_TAB] = ACTION_TAP_DANCE_DOUBLE(KC_GRV, KC_TAB),
     [TD_CAPS_ESC] = ACTION_TAP_DANCE_DOUBLE(KC_ESC, KC_CAPS),
     [TD_PER_DOLLAR] = ACTION_TAP_DANCE_DOUBLE(KC_PERCENT, KC_DOLLAR)
     // [TD_LOWER_ESC_TOGGLE] = ACTION_TAP_DANCE_FN(d  ance_lower_esc_toggle)
 };
 
+// Bit flags for storing active modifiers
+#define TMUX_MOD_LCTL (1 << 0)
+#define TMUX_MOD_LALT (1 << 1)
+#define TMUX_MOD_LGUI (1 << 2)
+#define TMUX_MOD_LSFT (1 << 3)
+#define TMUX_MOD_RCTL (1 << 4)
+#define TMUX_MOD_RALT (1 << 5)
+#define TMUX_MOD_RGUI (1 << 6)
+#define TMUX_MOD_RSFT (1 << 7)
 
-// prefixes the key with the tmux prefix
+#define IS_MOD(keycode) ((keycode) == KC_LCTL || (keycode) == KC_LALT || \
+                                  (keycode) == KC_LGUI || (keycode) == KC_LSFT || \
+                                  (keycode) == KC_RCTL || (keycode) == KC_RALT || \
+                                  (keycode) == KC_RGUI || (keycode) == KC_RSFT)
+
+static uint8_t tmux_mods = 0;
+
+// Convert keycode to corresponding mod flag
+static uint8_t get_mod_flag(uint16_t keycode) {
+    switch (keycode) {
+        case KC_LCTL: return TMUX_MOD_LCTL;
+        case KC_LALT: return TMUX_MOD_LALT;
+        case KC_LGUI: return TMUX_MOD_LGUI;
+        case KC_LSFT: return TMUX_MOD_LSFT;
+        case KC_RCTL: return TMUX_MOD_RCTL;
+        case KC_RALT: return TMUX_MOD_RALT;
+        case KC_RGUI: return TMUX_MOD_RGUI;
+        case KC_RSFT: return TMUX_MOD_RSFT;
+        default: return 0;
+    }
+}
+
+// Apply stored mods to a keycode
+static uint16_t apply_tmux_mods(uint16_t keycode) {
+    uint16_t mods = 0;
+    if (tmux_mods & TMUX_MOD_LCTL) mods |= MOD_LCTL;
+    if (tmux_mods & TMUX_MOD_LALT) mods |= MOD_LALT;
+    if (tmux_mods & TMUX_MOD_LGUI) mods |= MOD_LGUI;
+    if (tmux_mods & TMUX_MOD_LSFT) mods |= MOD_LSFT;
+    if (tmux_mods & TMUX_MOD_RCTL) mods |= MOD_RCTL;
+    if (tmux_mods & TMUX_MOD_RALT) mods |= MOD_RALT;
+    if (tmux_mods & TMUX_MOD_RGUI) mods |= MOD_RGUI;
+    if (tmux_mods & TMUX_MOD_RSFT) mods |= MOD_RSFT;
+    return (mods ? QK_MODS_MAX | (mods << 8) | (keycode & 0xFF) : keycode);
+}
+
+// prefixes the key with the tmux prefix and handles modifiers
 void tmux_key(uint16_t keycode) {
-      tap_code16(LCTL(KC_A)); //
-      tap_code(keycode); // Send the desired key
+    if (IS_MOD(keycode)) {
+        uint8_t mod_flag = get_mod_flag(keycode);
+        tmux_mods |= mod_flag;  // Store the modifier
+    } else {
+        tap_code16(LCTL(KC_A));
+        uint16_t modified_keycode = apply_tmux_mods(keycode);
+        tap_code16(modified_keycode);
+        tmux_mods = 0;  // Clear modifiers after key press
+    }
 }
 
 
@@ -55,26 +109,27 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Default
     [_BASE] = LAYOUT_65_ansi_blocker(
         TD(TD_CAPS_ESC), KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
-        KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
-        QK_GRAVE_ESCAPE,  LT(0,KC_A),    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_H,    RSFT_T(KC_J),   MT(MOD_LCTL, KC_K),    LALT_T(KC_L),    LT(0,KC_SCLN), KC_QUOT,          KC_ENT,  KC_PGUP,
+        TD(TD_GRV_TAB),  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
+        MT(MOD_LCTL, KC_ESC),  LT(0, KC_A),    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_H,    RSFT_T(KC_J),   MT(MOD_LCTL, KC_K),    LALT_T(KC_L),    LT(0,KC_SCLN), KC_QUOT,          KC_ENT,  KC_PGUP,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
-        KC_LCTL, LT(_TMUX, KC_LGUI), LT(_RAISE, KC_LALT),                            KC_SPC,                             LT(_TMUX, KC_RALT), MO(_CONFIG),   KC_LEFT, KC_DOWN, KC_RGHT
+        KC_LCTL, LT(_TMUX, KC_LGUI), LT(_RAISE, KC_LALT),                            LT(_RAISE, KC_SPC),                             LT(_TMUX, KC_RALT), MO(_CONFIG),   KC_LEFT, KC_DOWN, KC_RGHT
     ),
 
     // Upper
     [_RAISE] = LAYOUT_65_ansi_blocker(
         TD(TD_CAPS_ESC), KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
-        QK_GRAVE_ESCAPE,  CUSTOM_GUI_A,    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_LEFT,    KC_DOWN,   KC_UP, KC_RIGHT, CUSTOM_GUI_SCLN, KC_QUOT,          KC_ENT,  KC_PGUP,
+        QK_GRAVE_ESCAPE,  CUSTOM_GUI_A,    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_LEFT,    KC_DOWN,   KC_UP, KC_RIGHT, CUSTOM_GUI_SCLN, KC_GRV, KC_ENT,  KC_PGUP,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
         KC_LCTL, KC_LGUI, KC_LALT,                            KC_SPC,                             KC_RALT, MO(1),   KC_LEFT, KC_DOWN, KC_RGHT
     ),
+
 
     // Lower
     [_TMUX] = LAYOUT_65_ansi_blocker(
         _______, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
         _______, KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
-        _______, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,  KC_PGUP,
+        _______, KC_A,    KC_S,    KC_D,    KC_LSFT,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,  KC_PGUP,
         _______, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
         _______, _______, _______,                            _______,                             _______, _______,   KC_LEFT, KC_DOWN, KC_RGHT
     ),
@@ -128,8 +183,8 @@ bool process_detected_host_os_kb(os_variant_t detected_os) {
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // static uint16_t custom_gui_a_timer = 0;
     // static uint16_t custom_gui_scln_timer = 0;
-    // static bool gui_a_held = false;
-    // static bool gui_scln_held = false;
+    static bool gui_a_held = false;
+    static bool gui_scln_held = false;
     // static bool win_key_active = false;
     static bool other_key_pressed = false;
 
@@ -152,10 +207,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 // tap_code16(C(KC_V)); // Intercept hold function to send Ctrl-V
                 if (other_key_pressed) {
                     // tap_code16(KC_LGUI);
+                    gui_a_held = true;
                     register_code(KC_LGUI);
                 }
             } else {
-                unregister_code(KC_LGUI);
+
+                gui_a_held = false;
+                if (!gui_scln_held) {
+                    unregister_code(KC_LGUI);
+                }
             }
             return false;
         case LT(0, KC_SCLN):
@@ -166,10 +226,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 // tap_code16(C(KC_V)); // Intercept hold function to send Ctrl-V
                 if (other_key_pressed) {
                     // tap_code16(KC_LGUI);
+                    gui_scln_held = true;
                     register_code(KC_LGUI);
                 }
             } else {
-                unregister_code(KC_LGUI);
+                gui_scln_held = false;
+                if (!gui_a_held) {
+                    unregister_code(KC_LGUI);
+                }
             }
             return false;
     }
@@ -179,6 +243,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (record->event.pressed) {
             tmux_key(keycode);
             return false;
+        } else {
+            if (IS_MOD(keycode)) {
+                uint8_t mod_flag = get_mod_flag(keycode);
+                tmux_mods &= ~mod_flag;  // Clear the modifier flag on release
+            }
         }
     }
 
