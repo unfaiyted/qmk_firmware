@@ -5,8 +5,9 @@
 
 enum layers {
     _BASE,
-    _RAISE,
-    _LOWER,
+    _DIRECTIONS,  // HJKL = arrows (was _RAISE)
+    _UPPER,       // HJKL = Home/PgDn/PgUp/End
+    _LOWER,       // Tab navigation + brackets
     _CONFIG,
     _TMUX,
     _GAMES
@@ -108,24 +109,41 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     // Default
     [_BASE] = LAYOUT_65_ansi_blocker(
-        TD(TD_CAPS_ESC), KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
+        LT(_UPPER, KC_ESC), KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
         TD(TD_GRV_TAB),  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
-        MT(MOD_LCTL, KC_ESC),  LT(0, KC_A),    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_H,    RSFT_T(KC_J),   MT(MOD_LCTL, KC_K),    LALT_T(KC_L),    LT(0,KC_SCLN), KC_QUOT,          KC_ENT,  KC_PGUP,
+        MT(MOD_LCTL, KC_ESC),  LT(0, KC_A),    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_H,    RSFT_T(KC_J),   MT(MOD_LCTL, KC_K),    LALT_T(KC_L),    LT(0,KC_SCLN), KC_QUOT,          LT(_LOWER, KC_ENT),  KC_PGUP,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
-        KC_LCTL, LT(_TMUX, KC_LGUI), LT(_RAISE, KC_LALT),                            LT(_RAISE, KC_SPC),                             LT(_TMUX, KC_RALT), MO(_CONFIG),   KC_LEFT, KC_DOWN, KC_RGHT
+        KC_LCTL, LT(_TMUX, KC_LGUI), LT(_DIRECTIONS, KC_LALT),                            LT(_DIRECTIONS, KC_SPC),                             LT(_TMUX, KC_RALT), MO(_CONFIG),   KC_LEFT, KC_DOWN, KC_RGHT
     ),
 
-    // Upper
-    [_RAISE] = LAYOUT_65_ansi_blocker(
-        TD(TD_CAPS_ESC), KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
+    // Directions - HJKL = Arrow Keys (was _RAISE)
+    [_DIRECTIONS] = LAYOUT_65_ansi_blocker(
+        _______, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
-        QK_GRAVE_ESCAPE,  CUSTOM_GUI_A,    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_LEFT,    KC_DOWN,   KC_UP, KC_RIGHT, CUSTOM_GUI_SCLN, KC_GRV, KC_ENT,  KC_PGUP,
+        KC_GRV,  LGUI_T(KC_A),    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_LEFT,    KC_DOWN,   KC_UP, KC_RIGHT, KC_SCLN, KC_GRV, KC_ENT,  KC_PGUP,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
-        KC_LCTL, KC_LGUI, KC_LALT,                            KC_SPC,                             KC_RALT, MO(1),   KC_LEFT, KC_DOWN, KC_RGHT
+        KC_LCTL, KC_LGUI, KC_LALT,                            KC_SPC,                             KC_RALT, _______,   KC_LEFT, KC_DOWN, KC_RGHT
     ),
 
+    // Upper - HJKL = Home/PgDn/PgUp/End
+    [_UPPER] = LAYOUT_65_ansi_blocker(
+        _______, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
+        KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
+        _______,  LGUI_T(KC_A),    LALT_T(KC_S),    MT(MOD_LCTL, KC_D),    LSFT_T(KC_F),    KC_G,    KC_HOME,    KC_PGDN,   KC_PGUP, KC_END, KC_SCLN, KC_GRV, KC_ENT,  KC_PGUP,
+        KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
+        KC_LCTL, KC_LGUI, KC_LALT,                            KC_SPC,                             KC_RALT, _______,   KC_LEFT, KC_DOWN, KC_RGHT
+    ),
 
-    // Lower
+    // Lower - Tab navigation + brackets
+    [_LOWER] = LAYOUT_65_ansi_blocker(
+        _______, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
+        KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
+        _______,  LGUI_T(KC_A),    LALT_T(KC_S),    C(KC_TAB),    C(S(KC_TAB)),    KC_G,    KC_LBRC,    S(KC_9),   S(KC_0), KC_RBRC, KC_SCLN, KC_GRV, _______,  KC_PGUP,
+        KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
+        KC_LCTL, KC_LGUI, KC_LALT,                            KC_SPC,                             KC_RALT, _______,   KC_LEFT, KC_DOWN, KC_RGHT
+    ),
+
+    // TMUX - Auto prefix with Ctrl+A
     [_TMUX] = LAYOUT_65_ansi_blocker(
         _______, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,
         _______, KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_HOME,
